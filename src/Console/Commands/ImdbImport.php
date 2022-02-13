@@ -383,7 +383,10 @@ class ImdbImport extends Command
             return null;
         }
 
-        return Str::of($value)->trim();
+        $value = Str::of($value)->trim();
+        $value = Str::limit($value, 252);
+
+        return $value;
     }
 
     public function downloadFiles()

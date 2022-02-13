@@ -17,8 +17,8 @@ return new class extends Migration
             $table->id();
             $table->string('tconst');
             $table->string('title_type')->nullable();
-            $table->text('primary_title')->nullable();
-            $table->text('original_title')->nullable();
+            $table->string('primary_title')->nullable();
+            $table->string('original_title')->nullable();
             $table->string('start_year')->nullable();
             $table->string('end_year')->nullable();
             $table->string('runtime_minutes')->nullable();
