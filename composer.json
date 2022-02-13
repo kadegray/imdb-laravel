@@ -2,7 +2,7 @@
     "name": "kadegray/imdb-laravel",
     "description": "Import and use IMDB data in Laravel.",
     "keywords": ["imdb", "laravel"],
-    "type": "library",
+    "type": "project",
     "license": "MIT",
     "authors": [
       {
