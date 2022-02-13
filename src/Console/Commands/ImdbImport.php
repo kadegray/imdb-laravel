@@ -370,7 +370,7 @@ class ImdbImport extends Command
     public function getLineCountOfDownload($filename = 'title.basics.tsv.gz')
     {
         $filePath = storage_path("/app/$filename");
-        $command = sprintf('gzcat %s | wc -l', $filePath);
+        $command = sprintf('cat %s | zcat | wc -l', $filePath);
 
         $lineCount = exec($command);
 
