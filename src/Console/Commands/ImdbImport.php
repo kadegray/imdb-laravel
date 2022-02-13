@@ -48,15 +48,15 @@ class ImdbImport extends Command
      */
     public function handle()
     {
-        // $this->downloadFiles();
+        $this->downloadFiles();
 
         $this->importTitles();
-        // $this->importTitleRatings();
+        $this->importTitleRatings();
         $this->importEpisodeData();
 
-        // $this->importNames();
-        // $this->importPrincipals();
-        // $this->importCrew();
+        $this->importNames();
+        $this->importPrincipals();
+        $this->importCrew();
 
         return 0;
     }
