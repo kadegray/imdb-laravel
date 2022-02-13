@@ -24,5 +24,7 @@
                 "KadeGray\\ImdbLaravel\\ImdbLaravelServiceProvider"
             ]
         }
-    }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
   }
