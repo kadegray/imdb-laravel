@@ -5,7 +5,7 @@ IMDB dataset importer with migrations, models and relationships.
 ### Installation
 
 ```
-composer install kadegray/imdb-laravel
+composer require kadegray/imdb-laravel
 php artisan migrate
 ```
 
