@@ -79,7 +79,7 @@ class ImdbImport extends Command
             foreach ($headings as $index => $heading) {
 
                 $heading = Str::snake($heading);
-                $value = $this->handleValue($row[$index]);
+                $value = $this->handleValue(data_get($row, $index));
 
                 if (in_array($heading, [
                     'parent_tconst',
@@ -109,7 +109,7 @@ class ImdbImport extends Command
             foreach ($headings as $index => $heading) {
 
                 $heading = Str::snake($heading);
-                $value = $this->handleValue($row[$index]);
+                $value = $this->handleValue(data_get($row, $index));
 
                 if (in_array($heading, $imdbCrewFields)) {
                     data_set($imdbCrew, $heading, $value);
@@ -165,7 +165,7 @@ class ImdbImport extends Command
             foreach ($headings as $index => $heading) {
 
                 $heading = Str::snake($heading);
-                $value = $this->handleValue($row[$index]);
+                $value = $this->handleValue(data_get($row, $index));
 
                 if (in_array($heading, $imdbPrincipalFields)) {
                     data_set($imdbPrincipal, $heading, $value);
@@ -210,7 +210,7 @@ class ImdbImport extends Command
             foreach ($headings as $index => $heading) {
 
                 $heading = Str::snake($heading);
-                $value = $this->handleValue($row[$index]);
+                $value = $this->handleValue(data_get($row, $index));
 
                 if (in_array($heading, $imdbNameFields)) {
                     data_set($imdbName, $heading, $value);
@@ -268,7 +268,7 @@ class ImdbImport extends Command
             foreach ($headings as $index => $heading) {
 
                 $heading = Str::snake($heading);
-                $value = $this->handleValue($row[$index]);
+                $value = $this->handleValue(data_get($row, $index));
 
                 if (in_array($heading, [
                     'average_rating',
@@ -296,7 +296,7 @@ class ImdbImport extends Command
             foreach ($headings as $index => $heading) {
 
                 $heading = Str::snake($heading);
-                $value = $this->handleValue($row[$index]);
+                $value = $this->handleValue(data_get($row, $index));
 
                 if (
                     $heading == 'is_adult'
