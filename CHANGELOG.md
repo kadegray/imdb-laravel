@@ -15,3 +15,7 @@ Fix for getting line count of .gz files. Changed from using gzcat to zcat.
 ## [v2.0.2 (2022-02-13)]
 
 Removing 6k record limit on imports.
+
+## [v2.0.3 (2022-02-13)]
+
+Fix for undefined index error in the import command.
