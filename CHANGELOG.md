@@ -11,3 +11,7 @@ Changed title columns in imdb_titles to varchars.
 ## [v2.0.1 (2022-02-13)]
 
 Fix for getting line count of .gz files. Changed from using gzcat to zcat.
+
+## [v2.0.2 (2022-02-13)]
+
+Removing 6k record limit on imports.

@@ -339,14 +339,14 @@ class ImdbImport extends Command
 
         $headings = null;
 
-        $rowCount = 0;
-        $maxRows = 6000;
+        // $rowCount = 0;
+        // $maxRows = 6000;
 
         $totalRows = $this->getLineCountOfDownload();
         $bar = $this->output->createProgressBar($totalRows);
         while (!gzeof($handle)) {
             $bar->advance();
-            $rowCount++;
+            // $rowCount++;
 
             $row = gzgets($handle, 4096);
             $row = preg_split("/\t+/", $row);
@@ -358,9 +358,9 @@ class ImdbImport extends Command
 
             $insertRow($headings, $row);
 
-            if ($rowCount >= $maxRows) {
-                break;
-            }
+            // if ($rowCount >= $maxRows) {
+            //     break;
+            // }
         }
 
         gzclose($handle);
