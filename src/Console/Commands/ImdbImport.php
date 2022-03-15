@@ -107,7 +107,7 @@ class ImdbImport extends Command
                 ])->id;
             }
 
-            $imdbTitle->genres2()->sync($genres);
+            $imdbTitle->imdbGenres()->sync($genres);
         });
     }
 

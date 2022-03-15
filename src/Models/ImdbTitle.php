@@ -24,18 +24,18 @@ class ImdbTitle extends Model
         'num_votes',
     ];
 
-    public function genres2()
+    public function imdbGenres()
     {
         return $this->belongsToMany(ImdbGenre::class, 'imdb_genre_imdb_title', 'imdb_title_id', 'imdb_genre_id');
     }
 
-    public function namesKnownForThisTitle()
-    {
-        return $this->belongsToMany(ImdbName::class, 'imdb_name_known_for_imdb_title', 'imdb_title_id', 'imdb_name_id');
-    }
+    // public function namesKnownForThisTitle()
+    // {
+    //     return $this->belongsToMany(ImdbName::class, 'imdb_name_known_for_imdb_title', 'imdb_title_id', 'imdb_name_id');
+    // }
 
-    public function principals()
-    {
-        return $this->hasMany(ImdbPrincipal::class, 'tconst', 'tconst');
-    }
+    // public function principals()
+    // {
+    //     return $this->hasMany(ImdbPrincipal::class, 'tconst', 'tconst');
+    // }
 }
