@@ -22,11 +22,6 @@ class ImdbPrincipal extends Model
         return $this->hasOne(ImdbTitle::class, 'tconst', 'tconst');
     }
 
-    public function name()
-    {
-        return $this->hasOne(ImdbName::class, 'nconst', 'nconst');
-    }
-
     public function characters()
     {
         return $this->belongsToMany(ImdbCharacter::class, 'imdb_character_imdb_principal', 'imdb_principal_id', 'imdb_character_id');

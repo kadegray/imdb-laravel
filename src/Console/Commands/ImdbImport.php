@@ -7,8 +7,6 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use KadeGray\ImdbLaravel\Models\ImdbGenre;
 use KadeGray\ImdbLaravel\Models\ImdbTitle;
-use KadeGray\ImdbLaravel\Models\ImdbName;
-use KadeGray\ImdbLaravel\Models\ImdbProfession;
 use KadeGray\ImdbLaravel\Models\ImdbPrincipal;
 use KadeGray\ImdbLaravel\Models\ImdbCharacter;
 use KadeGray\ImdbLaravel\Models\ImdbCrew;
@@ -52,14 +50,32 @@ class ImdbImport extends Command
 
         $this->importTitles();
         $this->importTitleRatings();
-        $this->importEpisodeData();
 
-        $this->importNames();
         $this->importPrincipals();
         $this->importCrew();
 
         return 0;
     }
+
+
+    public function downloadFiles()
+    {
+        foreach ([
+            'title.crew.tsv.gz',
+            'title.basics.tsv.gz',
+            'title.principals.tsv.gz',
+            'title.ratings.tsv.gz',
+        ] as $imdbFilename) {
+
+            if ($this->hasDownloadFile($imdbFilename)) {
+                $this->info("$imdbFilename already downloaded");
+                continue;
+            }
+
+            $this->downloadFile($imdbFilename);
+        }
+    }
+
 
     public function importTitles()
     {
@@ -70,13 +86,23 @@ class ImdbImport extends Command
 
         $this->iterateOverFile($imdbFileName, function ($headings, $row) {
 
-            $movie = [];
+            $tconst = $row[0];
+            $imdbTitleData = [];
 
             foreach ($headings as $index => $heading) {
 
                 $heading = Str::snake($heading);
                 $value = $this->handleValue(data_get($row, $index));
 
+                // only movies
+                if (
+                    $heading == 'title_type'
+                    && !in_array($value, ['movie', 'tvMovie'])
+                ) {
+                    return;
+                }
+
+                // no adult
                 if (
                     $heading == 'is_adult'
                     && $value == '1'
@@ -91,10 +117,12 @@ class ImdbImport extends Command
                     return;
                 }
 
-                data_set($movie, $heading, $value);
+                data_set($imdbTitleData, $heading, $value);
             }
 
-            $imdbTitle = ImdbTitle::create($movie);
+            $imdbTitle = ImdbTitle::updateOrCreate([
+                'tconst' => $tconst,
+            ], $imdbTitleData);
 
             $genres = Str::of($imdbTitle->genres)
                 ->trim()
@@ -107,7 +135,7 @@ class ImdbImport extends Command
                 ])->id;
             }
 
-            $imdbTitle->imdbGenres()->sync($genres);
+            $imdbTitle->genres2()->sync($genres);
         });
     }
 
@@ -121,8 +149,8 @@ class ImdbImport extends Command
         $this->iterateOverFile($imdbFileName, function ($headings, $row) {
 
             $tconst = $row[0];
-            $movie = ImdbTitle::where('tconst', $tconst)->first();
-            if (!$movie) {
+            $imdbTitle = ImdbTitle::where('tconst', $tconst)->first();
+            if (!$imdbTitle) {
 
                 return;
             }
@@ -136,39 +164,6 @@ class ImdbImport extends Command
                     'average_rating',
                     'num_votes',
                 ])) {
-                    data_set($movie, $heading, $value);
-                }
-            }
-
-            $movie->save();
-        });
-    }
-
-    public function importEpisodeData()
-    {
-        $imdbFileName = 'title.episode.tsv.gz';
-
-        $this->newLine(2);
-        $this->line("Importing TV Show Season and Episodes ($imdbFileName)");
-
-        $this->iterateOverFile($imdbFileName, function ($headings, $row) {
-
-            $tconst = data_get($row, '0');
-            $imdbTitle = ImdbTitle::where('tconst', $tconst)->first();
-            if (!$imdbTitle) {
-                return;
-            }
-
-            foreach ($headings as $index => $heading) {
-
-                $heading = Str::snake($heading);
-                $value = $this->handleValue(data_get($row, $index));
-
-                if (in_array($heading, [
-                    'parent_tconst',
-                    'season_number',
-                    'episode_number',
-                ])) {
                     data_set($imdbTitle, $heading, $value);
                 }
             }
@@ -177,160 +172,133 @@ class ImdbImport extends Command
         });
     }
 
-    // public function importNames()
-    // {
-    //     $imdbFileName = 'name.basics.tsv.gz';
 
-    //     $this->newLine(2);
-    //     $this->line("Importing Names ($imdbFileName)");
+    public function importPrincipals()
+    {
+        $imdbFileName = 'title.principals.tsv.gz';
 
-    //     $this->iterateOverFile($imdbFileName, function ($headings, $row) {
+        $this->newLine(2);
+        $this->line("Importing Principals ($imdbFileName)");
 
-    //         $imdbNameFields = (new ImdbName())->getFillable();
-    //         $imdbName = [];
+        $this->iterateOverFile($imdbFileName, function ($headings, $row) {
 
-    //         foreach ($headings as $index => $heading) {
+            $tconst = $row[0];
+            if (ImdbTitle::where('tconst', $tconst)->doesntExist()) {
 
-    //             $heading = Str::snake($heading);
-    //             $value = $this->handleValue(data_get($row, $index));
+                return;
+            }
 
-    //             if (in_array($heading, $imdbNameFields)) {
-    //                 data_set($imdbName, $heading, $value);
-    //             }
-    //         }
+            $imdbPrincipalFields = (new ImdbPrincipal())->getFillable();
+            $imdbPrincipal = [];
 
-    //         $imdbName = ImdbName::create($imdbName);
+            foreach ($headings as $index => $heading) {
 
+                $heading = Str::snake($heading);
+                $value = $this->handleValue(data_get($row, $index));
 
-    //         // primary professions
-    //         $primaryProfessions = Str::of($imdbName->primary_profession)
-    //             ->trim()
-    //             ->explode(',')
-    //             ->toArray();
+                if (in_array($heading, $imdbPrincipalFields)) {
+                    data_set($imdbPrincipal, $heading, $value);
+                }
+            }
 
-    //         foreach ($primaryProfessions as &$primaryProfession) {
-    //             $primaryProfession = ImdbProfession::firstOrCreate([
-    //                 'name' => $primaryProfession,
-    //             ])->id;
-    //         }
-
-    //         $imdbName->primaryProfessions()->sync($primaryProfession);
+            $imdbName = ImdbPrincipal::create($imdbPrincipal);
 
 
-    //         // known for titles
-    //         $knownForTitles = Str::of($imdbName->known_for_titles)
-    //             ->trim()
-    //             ->explode(',')
-    //             ->toArray();
+            $characters = $imdbName->characters;
+            $characters = Str::replaceFirst('[', '', $characters);
+            $characters = Str::replaceFirst(']', '', $characters);
+            $characters = Str::of($characters)->explode(',')->toArray();
+            foreach ($characters as &$character) {
+                $character = Str::replaceFirst('"', '', $character);
+                $character = Str::replaceFirst('"', '', $character);
+            }
 
-    //         $knownForTitles = ImdbTitle::whereIn('tconst', $knownForTitles)
-    //             ->get()
-    //             ->pluck('id');
+            foreach ($characters as &$character) {
+                $character = ImdbCharacter::firstOrCreate([
+                    'name' => $character,
+                ]);
+                $character = data_get($character, 'id');
+            }
 
-    //         $imdbName->knownForTitles()->sync($knownForTitles);
-    //     });
-    // }
+            $imdbName->characters()->sync($characters);
+        });
+    }
 
-    // public function importPrincipals()
-    // {
-    //     $imdbFileName = 'title.principals.tsv.gz';
+    public function importCrew()
+    {
+        $imdbFileName = 'title.crew.tsv.gz';
 
-    //     $this->newLine(2);
-    //     $this->line("Importing Principals ($imdbFileName)");
+        $this->newLine(2);
+        $this->line("Importing Crew ($imdbFileName)");
 
-    //     $this->iterateOverFile($imdbFileName, function ($headings, $row) {
+        $this->iterateOverFile($imdbFileName, function ($headings, $row) {
 
-    //         $imdbPrincipalFields = (new ImdbPrincipal())->getFillable();
-    //         $imdbPrincipal = [];
+            $tconst = $row[0];
+            if (ImdbTitle::where('tconst', $tconst)->doesntExist()) {
 
-    //         foreach ($headings as $index => $heading) {
+                return;
+            }
 
-    //             $heading = Str::snake($heading);
-    //             $value = $this->handleValue(data_get($row, $index));
+            $imdbCrewFields = (new ImdbCrew())->getFillable();
+            $imdbCrew = [];
 
-    //             if (in_array($heading, $imdbPrincipalFields)) {
-    //                 data_set($imdbPrincipal, $heading, $value);
-    //             }
-    //         }
+            foreach ($headings as $index => $heading) {
 
-    //         $imdbName = ImdbPrincipal::create($imdbPrincipal);
+                $heading = Str::snake($heading);
+                $value = $this->handleValue(data_get($row, $index));
 
+                if (in_array($heading, $imdbCrewFields)) {
+                    data_set($imdbCrew, $heading, $value);
+                }
+            }
 
-    //         $characters = $imdbName->characters;
-    //         $characters = Str::replaceFirst('[', '', $characters);
-    //         $characters = Str::replaceFirst(']', '', $characters);
-    //         $characters = Str::of($characters)->explode(',')->toArray();
-    //         foreach ($characters as &$character) {
-    //             $character = Str::replaceFirst('"', '', $character);
-    //             $character = Str::replaceFirst('"', '', $character);
-    //         }
-
-    //         foreach ($characters as &$character) {
-    //             $character = ImdbCharacter::firstOrCreate([
-    //                 'name' => $character,
-    //             ]);
-    //             $character = data_get($character, 'id');
-    //         }
-
-    //         $imdbName->characters()->sync($characters);
-    //     });
-    // }
-
-    // public function importCrew()
-    // {
-    //     $imdbFileName = 'title.crew.tsv.gz';
-
-    //     $this->newLine(2);
-    //     $this->line("Importing Crew ($imdbFileName)");
-
-    //     $this->iterateOverFile($imdbFileName, function ($headings, $row) {
-
-    //         $imdbCrewFields = (new ImdbCrew())->getFillable();
-    //         $imdbCrew = [];
-
-    //         foreach ($headings as $index => $heading) {
-
-    //             $heading = Str::snake($heading);
-    //             $value = $this->handleValue(data_get($row, $index));
-
-    //             if (in_array($heading, $imdbCrewFields)) {
-    //                 data_set($imdbCrew, $heading, $value);
-    //             }
-    //         }
-
-    //         $imdbCrew = ImdbCrew::create($imdbCrew);
+            $imdbCrew = ImdbCrew::create($imdbCrew);
 
 
-    //         // directors
-    //         $directors = Str::of($imdbCrew->directors)
-    //             ->trim()
-    //             ->explode(',')
-    //             ->toArray();
+            // directors
+            $directors = Str::of($imdbCrew->directors)
+                ->trim()
+                ->explode(',')
+                ->toArray();
 
-    //         foreach ($directors as &$director) {
-    //             $director = ImdbDirector::firstOrCreate([
-    //                 'name' => $director,
-    //             ])->id;
-    //         }
+            foreach ($directors as &$director) {
+                $director = ImdbDirector::firstOrCreate([
+                    'name' => $director,
+                ])->id;
+            }
 
-    //         $imdbCrew->directors()->sync($directors);
+            $imdbCrew->directors()->sync($directors);
 
 
-    //         // writers
-    //         $writers = Str::of($imdbCrew->writers)
-    //             ->trim()
-    //             ->explode(',')
-    //             ->toArray();
+            // writers
+            $writers = Str::of($imdbCrew->writers)
+                ->trim()
+                ->explode(',')
+                ->toArray();
 
-    //         foreach ($writers as &$writer) {
-    //             $writer = ImdbWriter::firstOrCreate([
-    //                 'name' => $writer,
-    //             ])->id;
-    //         }
+            foreach ($writers as &$writer) {
+                $writer = ImdbWriter::firstOrCreate([
+                    'name' => $writer,
+                ])->id;
+            }
 
-    //         $imdbCrew->writers()->sync($writers);
-    //     });
-    // }
+            $imdbCrew->writers()->sync($writers);
+        });
+    }
+
+
+    public function downloadFile($imdbFilename)
+    {
+        $this->line("Downloading $imdbFilename");
+        $titlesContents = file_get_contents("https://datasets.imdbws.com/$imdbFilename");
+        $this->info("Downloaded $imdbFilename");
+
+        $this->line("Saving $imdbFilename");
+        Storage::disk('local')->put($imdbFilename, $titlesContents);
+        $this->info("Saved $imdbFilename");
+
+        unset($titlesContents);
+    }
 
     public function iterateOverFile($imdbFilename, $insertRow)
     {
@@ -339,13 +307,17 @@ class ImdbImport extends Command
 
         $headings = null;
 
-        // $rowCount = 0;
-        // $maxRows = 6000;
+        $totalRows = $this->getLineCountOfDownload($imdbFilename);
 
-        $totalRows = $this->getLineCountOfDownload();
+        // $rowCount = 0;
+        // $maxRows = 15000;
+        // $totalRows = $maxRows;
+
         $bar = $this->output->createProgressBar($totalRows);
+        $bar->setFormat('very_verbose');
         while (!gzeof($handle)) {
             $bar->advance();
+
             // $rowCount++;
 
             $row = gzgets($handle, 4096);
@@ -367,7 +339,7 @@ class ImdbImport extends Command
         $bar->finish();
     }
 
-    public function getLineCountOfDownload($filename = 'title.basics.tsv.gz')
+    public function getLineCountOfDownload($filename)
     {
         $filePath = storage_path("/app/$filename");
         $command = sprintf('cat %s | zcat | wc -l', $filePath);
@@ -389,41 +361,8 @@ class ImdbImport extends Command
         return $value;
     }
 
-    public function downloadFiles()
-    {
-        foreach ([
-            'title.basics.tsv.gz',
-            // 'title.crew.tsv.gz',
-            'title.episode.tsv.gz',
-            // 'title.principals.tsv.gz',
-            'title.ratings.tsv.gz',
-            // 'name.basics.tsv.gz'
-        ] as $imdbFilename) {
-
-            if ($this->hasDownloadFile($imdbFilename)) {
-                $this->info("$imdbFilename already downloaded");
-                continue;
-            }
-
-            $this->downloadFile($imdbFilename);
-        }
-    }
-
-    public function hasDownloadFile($imdbFilename = 'title.basics.tsv.gz')
+    public function hasDownloadFile($imdbFilename)
     {
         return Storage::disk('local')->exists($imdbFilename);
-    }
-
-    public function downloadFile($imdbFilename = 'title.basics.tsv.gz')
-    {
-        $this->line("Downloading $imdbFilename");
-        $titlesContents = file_get_contents("https://datasets.imdbws.com/$imdbFilename");
-        $this->info("Downloaded $imdbFilename");
-
-        $this->line("Saving $imdbFilename");
-        Storage::disk('local')->put($imdbFilename, $titlesContents);
-        $this->info("Saved $imdbFilename");
-
-        unset($titlesContents);
     }
 }
