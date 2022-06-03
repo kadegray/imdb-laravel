@@ -7,11 +7,6 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use KadeGray\ImdbLaravel\Models\ImdbGenre;
 use KadeGray\ImdbLaravel\Models\ImdbTitle;
-use KadeGray\ImdbLaravel\Models\ImdbPrincipal;
-use KadeGray\ImdbLaravel\Models\ImdbCharacter;
-use KadeGray\ImdbLaravel\Models\ImdbCrew;
-use KadeGray\ImdbLaravel\Models\ImdbDirector;
-use KadeGray\ImdbLaravel\Models\ImdbWriter;
 
 class ImdbImport extends Command
 {
@@ -51,9 +46,6 @@ class ImdbImport extends Command
         $this->importTitles();
         $this->importTitleRatings();
 
-        $this->importPrincipals();
-        $this->importCrew();
-
         return 0;
     }
 
@@ -61,9 +53,7 @@ class ImdbImport extends Command
     public function downloadFiles()
     {
         foreach ([
-            'title.crew.tsv.gz',
             'title.basics.tsv.gz',
-            'title.principals.tsv.gz',
             'title.ratings.tsv.gz',
         ] as $imdbFilename) {
 
@@ -169,120 +159,6 @@ class ImdbImport extends Command
             }
 
             $imdbTitle->save();
-        });
-    }
-
-
-    public function importPrincipals()
-    {
-        $imdbFileName = 'title.principals.tsv.gz';
-
-        $this->newLine(2);
-        $this->line("Importing Principals ($imdbFileName)");
-
-        $this->iterateOverFile($imdbFileName, function ($headings, $row) {
-
-            $tconst = $row[0];
-            if (ImdbTitle::where('tconst', $tconst)->doesntExist()) {
-
-                return;
-            }
-
-            $imdbPrincipalFields = (new ImdbPrincipal())->getFillable();
-            $imdbPrincipal = [];
-
-            foreach ($headings as $index => $heading) {
-
-                $heading = Str::snake($heading);
-                $value = $this->handleValue(data_get($row, $index));
-
-                if (in_array($heading, $imdbPrincipalFields)) {
-                    data_set($imdbPrincipal, $heading, $value);
-                }
-            }
-
-            $imdbName = ImdbPrincipal::create($imdbPrincipal);
-
-
-            $characters = $imdbName->characters;
-            $characters = Str::replaceFirst('[', '', $characters);
-            $characters = Str::replaceFirst(']', '', $characters);
-            $characters = Str::of($characters)->explode(',')->toArray();
-            foreach ($characters as &$character) {
-                $character = Str::replaceFirst('"', '', $character);
-                $character = Str::replaceFirst('"', '', $character);
-            }
-
-            foreach ($characters as &$character) {
-                $character = ImdbCharacter::firstOrCreate([
-                    'name' => $character,
-                ]);
-                $character = data_get($character, 'id');
-            }
-
-            $imdbName->characters()->sync($characters);
-        });
-    }
-
-    public function importCrew()
-    {
-        $imdbFileName = 'title.crew.tsv.gz';
-
-        $this->newLine(2);
-        $this->line("Importing Crew ($imdbFileName)");
-
-        $this->iterateOverFile($imdbFileName, function ($headings, $row) {
-
-            $tconst = $row[0];
-            if (ImdbTitle::where('tconst', $tconst)->doesntExist()) {
-
-                return;
-            }
-
-            $imdbCrewFields = (new ImdbCrew())->getFillable();
-            $imdbCrew = [];
-
-            foreach ($headings as $index => $heading) {
-
-                $heading = Str::snake($heading);
-                $value = $this->handleValue(data_get($row, $index));
-
-                if (in_array($heading, $imdbCrewFields)) {
-                    data_set($imdbCrew, $heading, $value);
-                }
-            }
-
-            $imdbCrew = ImdbCrew::create($imdbCrew);
-
-
-            // directors
-            $directors = Str::of($imdbCrew->directors)
-                ->trim()
-                ->explode(',')
-                ->toArray();
-
-            foreach ($directors as &$director) {
-                $director = ImdbDirector::firstOrCreate([
-                    'name' => $director,
-                ])->id;
-            }
-
-            $imdbCrew->directors()->sync($directors);
-
-
-            // writers
-            $writers = Str::of($imdbCrew->writers)
-                ->trim()
-                ->explode(',')
-                ->toArray();
-
-            foreach ($writers as &$writer) {
-                $writer = ImdbWriter::firstOrCreate([
-                    'name' => $writer,
-                ])->id;
-            }
-
-            $imdbCrew->writers()->sync($writers);
         });
     }
 
