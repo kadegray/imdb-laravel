@@ -1,5 +1,11 @@
 # Release Notes
 
+## 3.0.2 (2026-08-19)
+
+- `imdb:dump` no longer shells out to the `mysql` CLI just to list `imdb_*` tables — it now uses Laravel's own DB connection, which also fixes `port`/`unix_socket` being silently dropped from the connection args.
+- `imdb:dump`'s `mysqldump` detection now also checks common Homebrew keg-only install paths and accepts `mariadb-dump` as an alternative, instead of only checking `$PATH`.
+- `imdb:dump` no longer hard-fails when no `mysqldump`/`mariadb-dump` binary is found — it automatically falls back to a built-in, dependency-free PHP dump (reading each table via the existing DB connection and writing escaped `INSERT` statements directly).
+
 ## 3.0.1 (2026-08-19)
 
 - Removed dangling `ImdbTitle::principals()` relation (referenced the `ImdbPrincipal` model deleted in v3.0.0).

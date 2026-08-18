@@ -24,8 +24,10 @@ Options:
 
 ### Dump
 
-Backs up the `imdb_*` MySQL tables to `database/imdb-data-backups/`. Requires a MySQL connection and the `mysql`/`mysqldump` CLI tools.
+Backs up the `imdb_*` MySQL tables to `database/imdb-data-backups/`. Requires a MySQL connection.
 
 ```
 php artisan imdb:dump
 ```
+
+If a `mysqldump`/`mariadb-dump` binary is found (checking `$PATH` and common Homebrew keg-only install locations), it's used for the dump. Otherwise, `imdb:dump` automatically falls back to a built-in, dependency-free PHP dump — no CLI tools required, just a slower dump for very large tables.
