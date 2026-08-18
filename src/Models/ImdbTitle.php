@@ -16,9 +16,6 @@ class ImdbTitle extends Model
         'start_year',
         'end_year',
         'runtime_minutes',
-        'parent_tconst',
-        'season_number',
-        'episode_number',
         'genres',
         'average_rating',
         'num_votes',
@@ -27,10 +24,5 @@ class ImdbTitle extends Model
     public function genres2()
     {
         return $this->belongsToMany(ImdbGenre::class, 'imdb_genre_imdb_title', 'imdb_title_id', 'imdb_genre_id');
-    }
-
-    public function principals()
-    {
-        return $this->hasMany(ImdbPrincipal::class, 'tconst', 'tconst');
     }
 }
